@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedGuide – Medicine Usage Guide (Offline)</title>
+<style>
+:root{
+  --bg:#eef2f7; --card:#ffffff; --ink:#14213d; --muted:#5b6780; --line:#d6deea;
+  --amber:#f2a516; --amber-ink:#4a3000; --teal:#1d7a72; --teal-bg:#e1f3f1;
+  --red:#b3261e; --red-bg:#fdeceb; --warn-bg:#fff3d6; --seg:#e6ebf3;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0e1626;--card:#16213a;--ink:#e8edf7;--muted:#9aa8c4;--line:#2a3857;--teal:#5fd0c4;--teal-bg:#12332f;--red:#ff9a92;--red-bg:#3a1b1a;--warn-bg:#3b2d0c;--seg:#22304e;--amber-ink:#2a1a00}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Avenir Next","Segoe UI",system-ui,sans-serif}
+.wrap{max-width:680px;margin:0 auto;padding:22px 16px 56px}
+header h1{font-size:32px;letter-spacing:-.03em;margin:0;font-weight:800}
+header h1 span{display:inline-block;background:var(--amber);color:var(--amber-ink);padding:0 10px;border-radius:8px;margin-right:6px}
+header p{margin:6px 0 18px;color:var(--muted)}
+.search{background:var(--card);border:2px solid var(--ink);border-radius:14px;padding:10px;display:flex;gap:8px}
+.search input[type=search]{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-size:18px;padding:8px 6px;outline:none}
+button,.btn{font:inherit;font-weight:700;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:var(--ink);color:var(--bg)}
+button.ghost,.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.photo{margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.photo img{max-height:90px;border-radius:10px;border:1px solid var(--line);display:none}
+.hint{font-size:14px;color:var(--muted);margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+.chips button{background:var(--card);color:var(--ink);border:1.5px solid var(--line);padding:6px 12px;font-weight:600;font-size:14px}
+.chips button:hover{border-color:var(--ink)}
+#out{margin-top:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:14px}
+.card-top{padding:16px 18px;border-bottom:2px dashed var(--line)}
+.card-top h2{margin:0;font-size:26px;letter-spacing:-.02em}
+.card-top .sci{color:var(--muted);font-size:15px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tag{font-size:13px;font-weight:700;padding:2px 10px;border-radius:99px;background:var(--seg)}
+.tag.rx{background:var(--warn-bg)}
+.sec{padding:14px 18px;border-bottom:1px solid var(--line)}
+.sec:last-child{border-bottom:0}
+.sec h3{margin:0 0 4px;font-size:15px;font-weight:800}
+.sec p,.sec ul{margin:0}
+.sec ul{padding-left:20px}
+.big{font-size:19px;font-weight:700}
+.meal{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:8px 0}
+.meal div{text-align:center;font-size:13px;font-weight:700;padding:9px 2px;border-radius:9px;background:var(--seg);color:var(--muted)}
+.meal div.on{background:var(--amber);color:var(--amber-ink);box-shadow:0 0 0 2px var(--ink)}
+.box{border-radius:12px;padding:12px 14px;margin:12px 18px;font-size:15px}
+.box.red{background:var(--red-bg);color:var(--red)}
+.box.amber{background:var(--warn-bg)}
+.box ul{margin:4px 0 0;padding-left:20px}
+.none{padding:18px;text-align:center}
+.disc{font-size:13px;color:var(--muted);margin-top:22px}
+.disc strong{color:var(--red)}
+.empty{color:var(--muted);text-align:center;padding:28px 10px}
+
+.more{margin:0 0 14px}
+.fda-head{padding:14px 18px;border-bottom:2px dashed var(--line)}
+.fda-head h2{margin:0;font-size:24px;letter-spacing:-.02em}
+details.lab{border-bottom:1px solid var(--line);padding:12px 18px}
+details.lab summary{cursor:pointer;font-weight:800;font-size:15px}
+details.lab p{margin:8px 0 0;font-size:15px;white-space:pre-line}
+.spin{color:var(--muted);text-align:center;padding:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1><span>Med</span>Guide</h1>
+  <p>Type a medicine name (brand or generic) to see how it is used. 11 common medicines have a quick guide that works offline. Any other medicine is looked up in the official US FDA drug label database (needs internet).</p>
+</header>
+
+<div class="search" role="search">
+  <input type="search" id="q" placeholder="Search any medicine, e.g. Tylenol, Lisinopril, Zyrtec" autocomplete="off" aria-label="Medicine name">
+  <button id="go">Search</button>
+</div>
+
+<div class="photo">
+  <label class="btn ghost" for="file">📷 Add photo of the box</label>
+  <input type="file" id="file" accept="image/*" capture="environment" hidden>
+  <img id="thumb" alt="Your medicine photo">
+  <p class="hint" id="photoHint">This offline version can't read photos. Add one to keep it in view, then type the name you see on it.</p>
+</div>
+
+<div class="chips" id="chips" aria-label="Medicines in this guide"></div>
+<div id="out"><p class="empty">Search above or tap a medicine to begin.</p></div>
+
+<p class="disc"><strong>Not medical advice.</strong> The quick guides are general adult information for 11 common medicines. Other results come from the US FDA (openFDA) drug label database. It is not a substitute for your doctor, your pharmacist or the leaflet in your package. Doses for children, pregnant people, older adults and people with kidney, liver or heart conditions are different: ask a doctor or pharmacist. In an emergency or suspected overdose, call your local emergency number or poison control immediately.</p>
+</div>
+
+<script>
+const MEDS=[
+{id:"paracetamol",name:"Paracetamol",sci:"Also called acetaminophen",alias:["acetaminophen","panadol","tylenol","calpol","dolo","dolo 650","crocin","paracetamol","tempra"],
+ group:"Pain and fever relief",rx:false,
+ what:"Eases mild to moderate pain (headache, toothache, period pain) and lowers fever.",
+ how:"Swallow tablets with a glass of water. Adults usually take 500 mg to 1,000 mg per dose.",
+ often:"Every 4 to 6 hours only if needed. Leave at least 4 hours between doses. Do not go above the daily maximum on your package (usually no more than 4,000 mg in 24 hours, and many labels advise less).",
+ food:"any",foodNote:"Can be taken with or without food.",
+ avoidFood:["Alcohol: regular or heavy drinking raises the risk of liver damage."],
+ avoidMeds:["Any other product containing paracetamol (many cold, flu and 'night' remedies do). This is how accidental overdose happens."],
+ notUse:["Severe liver disease or heavy alcohol use, unless a doctor says it is fine.","Allergy to paracetamol."],
+ side:["Usually well tolerated at normal doses.","Rarely: skin rash."],
+ miss:"Not needed on a schedule. Take only when you have symptoms, and keep the gap between doses.",
+ help:["You took more than the maximum, even if you feel fine. Liver damage can appear late.","Rash, swelling of face or lips, trouble breathing.","Fever lasting more than 3 days or pain lasting more than 5 days."],
+ note:"Children's doses depend on weight and the exact product. Use the label's chart or ask a pharmacist."},
+
+{id:"ibuprofen",name:"Ibuprofen",sci:"NSAID (anti-inflammatory)",alias:["advil","motrin","brufen","nurofen","combiflam","ibuprofen"],
+ group:"Pain, fever and inflammation",rx:false,
+ what:"Relieves pain, reduces inflammation and lowers fever (headache, muscle and joint pain, period pain, toothache).",
+ how:"Swallow with a full glass of water. Over-the-counter adult dose is usually 200 mg to 400 mg per dose.",
+ often:"Every 6 to 8 hours only if needed. Do not exceed 1,200 mg a day unless a doctor tells you to. Use the lowest dose for the shortest time.",
+ food:"with",foodNote:"Take with food or a glass of milk to protect your stomach.",
+ avoidFood:["Alcohol: increases the risk of stomach bleeding."],
+ avoidMeds:["Aspirin, naproxen, diclofenac and other anti-inflammatory painkillers.","Blood thinners such as warfarin.","Some blood-pressure medicines. Ask your pharmacist."],
+ notUse:["Stomach ulcer or past stomach bleeding.","Kidney disease or heart failure.","Asthma that gets worse with aspirin or similar painkillers.","Last 3 months of pregnancy."],
+ side:["Heartburn, stomach pain, nausea.","Dizziness."],
+ miss:"Only take when needed. Do not double up.",
+ help:["Black or bloody stools, or vomiting blood.","Chest pain, shortness of breath, swelling of ankles.","Rash, swelling of face, wheezing."],
+ note:""},
+
+{id:"aspirin",name:"Aspirin",sci:"Acetylsalicylic acid",alias:["disprin","bayer","ecosprin","aspirin","asprin"],
+ group:"Pain relief (and low-dose heart protection)",rx:false,
+ what:"At pain-relief doses it eases pain and fever. Low doses (about 75 mg to 100 mg) are only taken daily for heart protection when a doctor prescribes them.",
+ how:"Swallow with a full glass of water. Pain-relief doses for adults are usually 300 mg to 600 mg.",
+ often:"Every 4 to 6 hours only if needed, up to the maximum on your package. Take daily low-dose aspirin exactly as your doctor said.",
+ food:"after",foodNote:"Take after food to reduce stomach irritation.",
+ avoidFood:["Alcohol: raises the risk of stomach bleeding."],
+ avoidMeds:["Ibuprofen and other anti-inflammatory painkillers.","Blood thinners such as warfarin."],
+ notUse:["Anyone under 16 (risk of a rare serious illness called Reye's syndrome).","Stomach ulcer or bleeding problems.","Last 3 months of pregnancy.","Asthma triggered by aspirin."],
+ side:["Stomach upset, heartburn.","Easier bruising."],
+ miss:"For daily low-dose aspirin, take it when you remember the same day. Do not double the next dose.",
+ help:["Black stools or vomiting blood.","Ringing in the ears, confusion.","Rash or breathing problems."],
+ note:"Never start daily aspirin on your own for heart protection. Ask a doctor first."},
+
+{id:"amoxicillin",name:"Amoxicillin",sci:"Penicillin-type antibiotic",alias:["amoxil","mox","novamox","amoxicilin","amoxycillin","amoxicillin"],
+ group:"Antibiotic",rx:true,
+ what:"Treats bacterial infections such as ear, throat, chest and urinary infections. It does not work for colds or flu.",
+ how:"Swallow capsules or tablets whole with water, or mix the liquid as directed by the pharmacist.",
+ often:"Dose and number of times a day (often 2 or 3) are set by your prescription. Space doses evenly. Finish the full course even if you feel better.",
+ food:"any",foodNote:"With or without food. Taking it with food can reduce nausea or stomach upset.",
+ avoidFood:["No special foods to avoid. Alcohol is best limited while you are unwell."],
+ avoidMeds:["Methotrexate.","Warfarin (your doctor may check your blood more often).","Tell your doctor about all other medicines you take."],
+ notUse:["Allergy to penicillin or similar antibiotics.","Tell your doctor if you have kidney problems or had a bad reaction to an antibiotic before."],
+ side:["Diarrhoea, nausea.","Mild rash."],
+ miss:"Take it as soon as you remember. If it is almost time for the next dose, skip the missed one. Never double up.",
+ help:["Swelling of face or lips, hives, trouble breathing (allergic reaction).","Severe or bloody diarrhoea.","Yellow skin or eyes."],
+ note:"Prescription medicine. Follow your prescription over this guide."},
+
+{id:"azithromycin",name:"Azithromycin",sci:"Macrolide antibiotic",alias:["zithromax","azee","azithral","z-pak","zpack","azithromycin","azithromicin"],
+ group:"Antibiotic",rx:true,
+ what:"Treats certain bacterial infections of the chest, throat, ears, skin and some sexually transmitted infections.",
+ how:"Swallow with water. Dose and course length (often 3 to 5 days, taken once daily) are set by your prescription.",
+ often:"Usually once a day at the same time. Finish the full course.",
+ food:"before",foodNote:"Capsules: take at least 1 hour before or 2 hours after food. Tablets can be taken with or without food. Check your package.",
+ avoidFood:["Antacids containing aluminium or magnesium: take them at least 2 hours apart.","Alcohol is best avoided while ill."],
+ avoidMeds:["Antacids (see above).","Warfarin.","Some heart-rhythm medicines. Always tell your doctor what you take."],
+ notUse:["Allergy to azithromycin or similar antibiotics.","Certain heart-rhythm problems or serious liver disease. Ask your doctor."],
+ side:["Nausea, diarrhoea, stomach pain."],
+ miss:"Take it when you remember the same day. If it is nearly time for the next dose, skip it. Do not double.",
+ help:["Fast or irregular heartbeat, fainting.","Severe diarrhoea.","Rash, swelling of face, trouble breathing.","Yellow skin or eyes."],
+ note:"Prescription medicine. Follow your prescription over this guide."},
+
+{id:"cetirizine",name:"Cetirizine",sci:"Antihistamine",alias:["zyrtec","cetzine","alerid","okacet","cetirizine","cetrizine"],
+ group:"Allergy relief",rx:false,
+ what:"Relieves sneezing, runny nose, itchy eyes and hives from allergies.",
+ how:"Swallow one 10 mg tablet with water.",
+ often:"Once a day for adults. Taking it in the evening helps if it makes you sleepy.",
+ food:"any",foodNote:"With or without food.",
+ avoidFood:["Alcohol: increases drowsiness."],
+ avoidMeds:["Other sedating medicines (sleeping pills, some cough and cold products).","Other antihistamines."],
+ notUse:["Allergy to cetirizine or hydroxyzine.","Severe kidney disease: needs a lower dose from a doctor."],
+ side:["Drowsiness, dry mouth, tiredness, headache."],
+ miss:"Skip it if it is almost time for the next dose. Do not double.",
+ help:["Rash, swelling of face or throat, trouble breathing.","Difficulty passing urine."],
+ note:"Be careful driving or using machines until you know how it affects you."},
+
+{id:"loratadine",name:"Loratadine",sci:"Non-drowsy antihistamine",alias:["claritin","lorfast","lorano","alavert","loratadine","loratidine"],
+ group:"Allergy relief",rx:false,
+ what:"Relieves hay fever and allergy symptoms such as sneezing, runny nose and itchy eyes, usually with little drowsiness.",
+ how:"Swallow one 10 mg tablet with water.",
+ often:"Once a day for adults.",
+ food:"any",foodNote:"With or without food.",
+ avoidFood:["No special foods. Alcohol is best limited."],
+ avoidMeds:["Other antihistamines.","Ask your pharmacist if you take other regular medicines."],
+ notUse:["Allergy to loratadine.","Liver or kidney problems: ask a doctor about the dose."],
+ side:["Headache, dry mouth, mild tiredness."],
+ miss:"Take it when you remember. Do not double the next dose.",
+ help:["Rash, swelling of face, trouble breathing.","Fast heartbeat."],
+ note:""},
+
+{id:"omeprazole",name:"Omeprazole",sci:"Proton pump inhibitor (acid reducer)",alias:["prilosec","losec","omez","omeprazole","omeprazol"],
+ group:"Acid reflux and stomach ulcers",rx:false,
+ what:"Reduces stomach acid to treat heartburn, acid reflux and ulcers.",
+ how:"Swallow the capsule or tablet whole with water. Do not crush or chew.",
+ often:"Usually once a day, 20 mg. Over-the-counter use is typically a 14-day course. Longer use only on a doctor's advice.",
+ food:"before",foodNote:"Take 30 to 60 minutes before breakfast, on an empty stomach.",
+ avoidFood:["Foods that trigger your reflux: spicy, fatty or acidic foods, coffee, chocolate, alcohol."],
+ avoidMeds:["Clopidogrel (blood thinner).","Some HIV and antifungal medicines. Tell your doctor."],
+ notUse:["Allergy to omeprazole or similar medicines.","Difficulty swallowing, unexplained weight loss or vomiting: see a doctor before self-treating."],
+ side:["Headache, nausea, diarrhoea or constipation, gas."],
+ miss:"Take it when you remember, unless it is almost time for the next dose.",
+ help:["Black stools or vomiting blood.","Trouble or pain when swallowing.","Heartburn that returns quickly or lasts more than 14 days."],
+ note:""},
+
+{id:"metformin",name:"Metformin",sci:"Diabetes medicine",alias:["glucophage","glycomet","metformin","metphormin"],
+ group:"Type 2 diabetes",rx:true,
+ what:"Lowers blood sugar in people with type 2 diabetes.",
+ how:"Swallow whole with water. Dose is set by your doctor and usually increased slowly.",
+ often:"Usually 1 to 3 times a day, depending on the tablet type. Follow your prescription exactly.",
+ food:"with",foodNote:"Take with or just after meals to reduce nausea and stomach upset.",
+ avoidFood:["Heavy alcohol use.","Follow the diet plan your doctor gave you; large sugary meals work against the medicine."],
+ avoidMeds:["Tell doctors you take metformin before any scan using contrast dye or any surgery.","Ask before starting other medicines."],
+ notUse:["Severe kidney disease or liver disease.","Dehydration or serious infection: your doctor may tell you to pause it."],
+ side:["Nausea, diarrhoea, stomach upset, metallic taste (often settle over time)."],
+ miss:"Take it with your next meal. Do not double the dose.",
+ help:["Unusual muscle pain, deep fast breathing, extreme weakness or drowsiness, with vomiting or stomach pain.","Signs of very low or very high blood sugar."],
+ note:"Prescription medicine. Never change the dose or stop without asking your doctor."},
+
+{id:"amlodipine",name:"Amlodipine",sci:"Blood pressure medicine",alias:["norvasc","amlip","amlodac","amlodipine","amlodepine"],
+ group:"High blood pressure and angina",rx:true,
+ what:"Relaxes blood vessels to lower blood pressure and reduce chest pain (angina).",
+ how:"Swallow with water at the dose your doctor prescribed (commonly 5 mg or 10 mg).",
+ often:"Once a day, at the same time each day.",
+ food:"any",foodNote:"With or without food.",
+ avoidFood:["Large amounts of grapefruit juice may increase its effect. Ask your pharmacist.","Too much salt works against blood-pressure control."],
+ avoidMeds:["Simvastatin at high doses.","Other blood-pressure medicines: only combine as your doctor says."],
+ notUse:["Severe low blood pressure.","Allergy to amlodipine.","Tell your doctor about liver problems or pregnancy."],
+ side:["Swollen ankles, flushing, headache, tiredness, dizziness."],
+ miss:"Take it when you remember the same day. If it is almost time for the next dose, skip it.",
+ help:["Chest pain that gets worse, fainting.","Severe swelling or trouble breathing.","Yellow skin or eyes."],
+ note:"Do not stop suddenly without talking to your doctor. Prescription medicine."},
+
+{id:"atorvastatin",name:"Atorvastatin",sci:"Statin (cholesterol medicine)",alias:["lipitor","atorva","atorvastatin","atorvastin"],
+ group:"High cholesterol",rx:true,
+ what:"Lowers cholesterol to reduce the risk of heart attack and stroke.",
+ how:"Swallow with water at the dose your doctor prescribed.",
+ often:"Once a day, at any time, but at the same time each day.",
+ food:"any",foodNote:"With or without food.",
+ avoidFood:["Large amounts of grapefruit juice.","Heavy alcohol use.","A low-fat diet helps the medicine work better."],
+ avoidMeds:["Some antibiotics (such as clarithromycin) and antifungals.","Other cholesterol medicines unless prescribed together."],
+ notUse:["Active liver disease.","Pregnancy or breastfeeding."],
+ side:["Muscle aches, headache, stomach upset."],
+ miss:"Take it when you remember. If more than 12 hours late, skip it. Do not double.",
+ help:["Unexplained muscle pain, tenderness or weakness, especially with dark urine.","Yellow skin or eyes."],
+ note:"Prescription medicine. Keep taking it even if you feel well."}
+];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const out=$('out'),q=$('q');
+
+function lev(a,b){const m=[];for(let i=0;i<=b.length;i++)m[i]=[i];for(let j=0;j<=a.length;j++)m[0][j]=j;
+ for(let i=1;i<=b.length;i++)for(let j=1;j<=a.length;j++)m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(b[i-1]===a[j-1]?0:1));
+ return m[b.length][a.length]}
+
+function find(text){
+ const t=text.trim().toLowerCase();if(!t)return null;
+ const names=m=>[m.name.toLowerCase(),...m.alias.map(a=>a.toLowerCase())];
+ let hit=MEDS.find(m=>names(m).some(n=>n===t));
+ if(hit)return{m:hit,exact:true};
+ hit=MEDS.find(m=>names(m).some(n=>n.startsWith(t)||(t.length>=4&&n.includes(t))));
+ if(hit)return{m:hit,exact:true};
+ let best=null,score=99;
+ MEDS.forEach(m=>names(m).forEach(n=>{const d=lev(t,n);if(d<score){score=d;best=m}}));
+ if(best&&score<=Math.max(1,Math.floor(t.length/4)))return{m:best,exact:false};
+ return null;
+}
+
+const list=a=>'<ul>'+a.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
+const sec=(t,b)=>'<div class="sec"><h3>'+t+'</h3>'+b+'</div>';
+
+function show(m,note){
+ const slots=[["before","Before food"],["with","With food"],["after","After food"],["any","Any time"]];
+ out.innerHTML=(note||'')+'<article class="card">'+
+ '<div class="card-top"><h2>'+esc(m.name)+'</h2><div class="sci">'+esc(m.sci)+'</div>'+
+ '<div class="tags"><span class="tag">'+esc(m.group)+'</span>'+(m.rx?'<span class="tag rx">Prescription</span>':'<span class="tag">Over the counter</span>')+'</div></div>'+
+ sec('What it is for','<p>'+esc(m.what)+'</p>')+
+ sec('How to take it','<p>'+esc(m.how)+'</p>')+
+ sec('How many times a day','<p class="big">'+esc(m.often)+'</p>')+
+ sec('Before or after food','<div class="meal">'+slots.map(s=>'<div class="'+(s[0]===m.food?'on':'')+'">'+s[1]+'</div>').join('')+'</div><p>'+esc(m.foodNote)+'</p>')+
+ sec('Foods and drinks to avoid',list(m.avoidFood))+
+ sec('Do not mix with',list(m.avoidMeds))+
+ sec('Do not use if',list(m.notUse))+
+ sec('Common side effects',list(m.side))+
+ sec('If you miss a dose','<p>'+esc(m.miss)+'</p>')+
+ '<div class="box red"><strong>Get medical help if:</strong>'+list(m.help)+'</div>'+
+ (m.note?'<div class="box amber">'+esc(m.note)+'</div>':'')+
+ '<div class="box amber">Always check your package leaflet or prescription. If it differs from this guide, follow your doctor or pharmacist.</div>'+
+ '</article>';
+ out.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+const SECTIONS=[
+ ["indications_and_usage","What it is for",true],
+ ["purpose","Purpose",false],
+ ["dosage_and_administration","How to take it, how much and how often",true],
+ ["do_not_use","Do not use if",false],
+ ["ask_doctor","Ask a doctor before use if",false],
+ ["ask_doctor_or_pharmacist","Ask a doctor or pharmacist before use if you are taking",false],
+ ["when_using","When using this product",false],
+ ["stop_use","Stop use and ask a doctor if",false],
+ ["contraindications","Contraindications (do not use)",false],
+ ["warnings","Warnings",false],
+ ["drug_interactions","Interactions with other medicines",false],
+ ["adverse_reactions","Side effects",false],
+ ["overdosage","Overdose",false],
+ ["storage_and_handling","Storage",false]
+];
+const clip=(a,n=2200)=>{let t=(Array.isArray(a)?a.join('\n\n'):String(a)).replace(/\s+/g,' ').trim();return t.length>n?t.slice(0,n)+' … (see the full official label for the rest)':t};
+
+async function fda(term,target){
+ target.innerHTML='<p class="spin">Searching the FDA drug label database…</p>';
+ const t=term.replace(/["\\]/g,' ').trim();
+ const url='https://api.fda.gov/drug/label.json?limit=5&search='+
+  encodeURIComponent('openfda.brand_name:"'+t+'"')+'+OR+'+encodeURIComponent('openfda.generic_name:"'+t+'"')+'+OR+'+encodeURIComponent('openfda.substance_name:"'+t+'"');
+ let data;
+ try{
+  const r=await fetch(url);
+  if(r.status===404){return null}
+  if(!r.ok)throw new Error(r.status);
+  data=await r.json();
+ }catch(e){
+  target.innerHTML='<div class="card none"><h2>Can\'t reach the database</h2><p>Searching beyond the 11 built-in medicines needs an internet connection. Check your connection and try again.</p></div>';
+  return 'error';
+ }
+ const res=(data.results||[]);
+ if(!res.length)return null;
+ const d=res.find(x=>x.dosage_and_administration||x.indications_and_usage)||res[0];
+ const o=d.openfda||{};
+ const brand=(o.brand_name||[t])[0], gen=(o.generic_name||[])[0]||'', mf=(o.manufacturer_name||[])[0]||'';
+ const type=(o.product_type||[''])[0];
+ const rx=/PRESCRIPTION/i.test(type);
+ const secs=SECTIONS.filter(x=>d[x[0]]).map(x=>
+  '<details class="lab"'+(x[2]?' open':'')+'><summary>'+x[1]+'</summary><p>'+esc(clip(d[x[0]]))+'</p></details>').join('');
+ target.innerHTML='<article class="card"><div class="fda-head"><h2>'+esc(brand)+'</h2>'+
+  '<div class="sci">'+esc(gen)+(mf?' · '+esc(mf):'')+'</div>'+
+  '<div class="tags"><span class="tag">Official FDA label</span>'+(type?'<span class="tag'+(rx?' rx':'')+'">'+(rx?'Prescription':'Over the counter')+'</span>':'')+'</div></div>'+
+  (secs||'<div class="sec"><p>This label has no usage sections available. Ask a pharmacist.</p></div>')+
+  '<div class="box amber">This is text from the official US drug label, so wording is technical and doses may differ by country. Food and drink advice is usually inside the "How to take it" section. Your doctor\'s or pharmacist\'s instructions always come first.</div></article>';
+ return true;
+}
+
+async function run(){
+ const t=q.value.trim();
+ if(!t){out.innerHTML='<p class="empty">Type a medicine name first.</p>';return}
+ const r=find(t);
+ if(r&&r.exact){
+  show(r.m);
+  out.insertAdjacentHTML('beforeend','<div class="more"><button class="ghost" id="fdaBtn" type="button">View full official FDA label</button></div><div id="fdaOut"></div>');
+  $('fdaBtn').onclick=async()=>{const x=$('fdaOut');const ok=await fda(r.m.name,x);if(ok===null)x.innerHTML='<p class="empty">No FDA label found for that name.</p>'};
+  return;
+ }
+ out.innerHTML='<div id="fdaOut"></div>';
+ const ok=await fda(t,$('fdaOut'));
+ if(ok===null){
+  if(r){show(r.m,'<p class="hint" style="margin-bottom:8px">No exact match for "'+esc(t)+'". Showing the closest built-in medicine. Check the name on your box.</p>');}
+  else out.innerHTML='<div class="card none"><h2>No match found</h2><p>Nothing found for "'+esc(t)+'". Check the spelling or try the generic name printed on the box. The database covers medicines labelled in the US, so some local brand names may not appear: try the generic (active ingredient) name instead.</p></div>';
+ }
+}
+
+$('go').onclick=run;
+q.addEventListener('keydown',e=>{if(e.key==='Enter')run()});
+$('chips').innerHTML=MEDS.map(m=>'<button type="button" data-id="'+m.id+'">'+esc(m.name)+'</button>').join('');
+$('chips').onclick=e=>{const b=e.target.closest('button');if(!b)return;const m=MEDS.find(x=>x.id===b.dataset.id);q.value=m.name;show(m)};
+
+$('file').onchange=e=>{
+ const f=e.target.files[0];if(!f)return;
+ const img=$('thumb');img.src=URL.createObjectURL(f);img.style.display='block';
+ $('photoHint').textContent='Photo added. Read the medicine name on it and type it above.';
+ q.focus();
+};
+</script>
+</body>
+</html>
